@@ -17,7 +17,7 @@ Nx = argv[2:]
 nao_recebidos = Nx[:]
 iniciador = False
 entrada = None
-informacao = ""
+informacao = idx
 
 Estado = Enum("Estado", "INICIADOR OCIOSO AGUARDANDO OK")
 
@@ -36,58 +36,48 @@ def envia(msg, dest):
     canal.basic_publish(exchange="", routing_key=dest, body=f"{idx}:{msg}")
     print(f"enviando {msg} para {dest}")
 
+def concluiu():
+    global estado
+    if nao_recebidos:
+        return
+    if estado == Estado.INICIADOR:
+        print("onda concluida. informacao:", informacao)
+    else:
+        envia("I" + informacao, entrada)
+    estado = Estado.OK
+
 def espontaneamente(msg):
-    global estado, iniciador, nao_recebidos, informacao
+    global estado, nao_recebidos
+    if estado != Estado.OCIOSO:
+        return
     print("iniciador:", msg)
     estado = Estado.INICIADOR
-    if estado == Estado.INICIADOR:
-        iniciador = True
-        nao_recebidos = Nx[:]
-        for vizinho in Nx:
-            envia("R", vizinho)
-        estado = Estado.AGUARDANDO
+    nao_recebidos = Nx[:]
+    for vizinho in Nx:
+        envia("R", vizinho)
+    concluiu()
 
 def recebendo(msg, origem):
-    global estado, entrada, iniciador, nao_recebidos, informacao
-    if iniciador:
-        if(msg[0] == "R"):
-            print(f"recebi R de {origem}")
-            nao_recebidos.remove(origem)
-            if len(nao_recebidos) == 0:
-                print("todos vizinhos responderam, enviando token\ninformacao:", informacao)
-        elif(msg[0] == "I"):
-            print(f"recebi I de {origem}")
-            informacao += msg[1:]
-            nao_recebidos.remove(origem)
-            if len(nao_recebidos) == 0:
-                print("todos vizinhos responderam, enviando token\ninformacao:", informacao)
+    global estado, entrada, nao_recebidos, informacao
+    tipo, dado = msg[:1], msg[1:]
+    print(f"recebi {tipo} de {origem}")
     if estado == Estado.OCIOSO:
-        if(msg[0] == "R"):
-            print(f"recebi R de {origem}")
+        if tipo == "R":
             entrada = origem
-            nao_recebidos = Nx[:]
-            nao_recebidos.remove(origem)
-            iniciador = False
+            nao_recebidos = [v for v in Nx if v != origem]
             estado = Estado.AGUARDANDO
             for vizinho in nao_recebidos:
                 envia("R", vizinho)
-    elif estado == Estado.AGUARDANDO:
-        if(msg[0] == "R"):
+            concluiu()
+    elif estado in (Estado.INICIADOR, Estado.AGUARDANDO):
+        if tipo in ("R", "I") and origem in nao_recebidos:
             nao_recebidos.remove(origem)
-            if len(nao_recebidos) == 0:
-                envia("I" + informacao, entrada)
-                estado = Estado.OK
-        elif(msg[0] == "I"):
-            nao_recebidos.remove(origem)
-            informacao += msg[1:]
-            if len(nao_recebidos) == 0:
-                envia("I" + informacao, entrada)
-                estado = Estado.OK
-
-
+            if tipo == "I":
+                informacao += "," + dado
+            concluiu()
 
 def callback(canal, metodo,  props, msg):
-    m = msg.decode().split(":")
+    m = msg.decode().split(":", 1)
     if len(m) < 2:
         origem = "STARTER"
         msg = m[0]
