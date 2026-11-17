@@ -43,6 +43,7 @@ def concluiu():
     if estado == Estado.INICIADOR:
         print("onda concluida. informacao:", informacao)
     else:
+        print("recebi de todos os vizinhos")
         envia("I" + informacao, entrada)
     estado = Estado.OK
 
@@ -74,6 +75,7 @@ def recebendo(msg, origem):
             nao_recebidos.remove(origem)
             if tipo == "I":
                 informacao += "," + dado
+                print("informacao: ", informacao)
             concluiu()
 
 def callback(canal, metodo,  props, msg):
