@@ -3,6 +3,8 @@
 # Componentes Basico
 # PD/SDC - PUCPR
 # Prof. Luiz Lima Jr.
+# T2 - Waves
+# Grupo 5: Davi Kazuhiro Natume, Eduardo Teodoro Moreira de Souza, Lucas Antonio Pelanda, Pedro Henrique Valente Favero
 
 from pika import BlockingConnection
 from sys import argv
