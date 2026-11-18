@@ -15,7 +15,6 @@ if len(argv) < 2:
 idx = argv[1]
 Nx = argv[2:]
 nao_recebidos = Nx[:]
-iniciador = False
 entrada = None
 informacao = idx
 
